@@ -1,3 +1,29 @@
+openrouter:
+  api-key: ${OPENROUTER_API_KEY}
+  base-url: https://openrouter.ai/api/v1
+  models:
+    stt: openai/whisper-large-v3
+    llm: openai/gpt-4o
+
+transcoding:
+  max-size-bytes: 20971520    # 20 MB
+  bitrate: 48k
+  sample-rate: 16000
+
+server:
+  port: 8080
+
 spring:
   application:
     name: meeting-transcribe-api
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  # Inaktivera auto-konfiguration av VectorStore och DataSource
+  # tills du är redo att sätta upp pgvector + embedding-modell.
+  # Ta bort dessa excludes när du konfigurerar RAG.
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
