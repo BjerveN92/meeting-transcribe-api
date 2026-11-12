@@ -3,6 +3,7 @@ package dev.bjervig.meeting_transcribe_api.controller;
 import dev.bjervig.meeting_transcribe_api.dto.api.TranscribeResponse;
 import dev.bjervig.meeting_transcribe_api.dto.domain.MeetingReport;
 import dev.bjervig.meeting_transcribe_api.model.AnalysisProfile;
+import dev.bjervig.meeting_transcribe_api.model.LanguageCode;
 import dev.bjervig.meeting_transcribe_api.service.MainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -28,10 +29,16 @@ public class TranscriptionController {
         public ResponseEntity<TranscribeResponse> transcribe(
                         @RequestPart("file") MultipartFile file,
                         @RequestParam(value = "profile", defaultValue = "MEETING_MINUTES") String profileName,
-                        @RequestParam(value = "language", required = false) String language) throws IOException {
+                        @RequestParam(value = "language", required = false) String language,
+                        @RequestParam(value = "outputLanguage", required = false) String outputLanguage)
+                        throws IOException {
 
                 AnalysisProfile profile = AnalysisProfile.valueOf(
-                                profileName.toUpperCase());
+                                profileName.trim().toUpperCase());
+                // language: talat språk (ledtråd till ASR), tomt = autodetektering
+                // outputLanguage: språk för analysen, tomt = samma som mötet
+                String spokenLanguage = LanguageCode.normalize(language, "language");
+                String targetLanguage = LanguageCode.normalize(outputLanguage, "outputLanguage");
 
                 Path tempFile = Files.createTempFile("meeting-",
                                 "-" + file.getOriginalFilename());
@@ -39,7 +46,7 @@ public class TranscriptionController {
 
                 try {
                         MeetingReport report = mainService.process(
-                                        tempFile, profile, language);
+                                        tempFile, profile, spokenLanguage, targetLanguage);
                         return ResponseEntity.ok(TranscribeResponse.from(report));
                 } finally {
                         Files.deleteIfExists(tempFile);

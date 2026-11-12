@@ -13,5 +13,3 @@
 - **Unified API Gateway** - Single OpenRouter integration for both STT and LLM/SLM models - switch models by changing some config values. Easy-peasy-lemon-squeezy!
 
 - **Future: Translation** - Translate meeting summaries to other languages.
-
-- **Future: RAG Context Enrichment** - The user should be able to upload manual context that are relevant to the actuall meeting, for a better result. In RAG we trust!

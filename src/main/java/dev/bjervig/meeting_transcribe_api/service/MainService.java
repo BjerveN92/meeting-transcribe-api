@@ -24,7 +24,8 @@ public class MainService {
 
     public MeetingReport process(Path audioFile,
             AnalysisProfile profile,
-            String language) throws IOException {
+            String language,
+            String outputLanguage) throws IOException {
 
         // 1. Komprimera vid behov
         TranscodeResult transcoded = transcodingService.process(audioFile);
@@ -39,7 +40,7 @@ public class MainService {
 
         // 4. Analysera via OpenRouter LLM
         MeetingSummary summary = summaryService.summarize(
-                transcription, profile, context);
+                transcription, profile, context, outputLanguage);
 
         // 5. Paketera
         return new MeetingReport(

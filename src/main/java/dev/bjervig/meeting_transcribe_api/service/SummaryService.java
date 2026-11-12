@@ -10,6 +10,7 @@ import dev.bjervig.meeting_transcribe_api.dto.domain.Transcription;
 import dev.bjervig.meeting_transcribe_api.dto.openrouter.ChatRequest;
 import dev.bjervig.meeting_transcribe_api.dto.openrouter.ChatResponse;
 import dev.bjervig.meeting_transcribe_api.model.AnalysisProfile;
+import dev.bjervig.meeting_transcribe_api.model.LanguageCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -54,11 +55,37 @@ public class SummaryService {
         return sb.toString();
     }
 
+    /**
+     * outputLanguage är redan validerad som ISO-kod (se LanguageCode), så det är
+     * säkert att lägga den i systemprompten.
+     */
+    private String outputLanguageRules(String outputLanguage) {
+        if (outputLanguage == null) {
+            return """
+
+                SPRÅK FÖR SVARET:
+                - Skriv alla textvärden i JSON-svaret på samma språk som talas i transkriberingen.
+                """;
+        }
+        return """
+
+            SPRÅK FÖR SVARET (gäller före alla andra språkregler ovan):
+            - Skriv ALLA textvärden i JSON-svaret på %s (ISO-kod: %s), även om mötet hölls på ett annat språk.
+            - Det gäller även "corrected_text": översätt den till %s och behåll innebörd, ton och talaridentifiering.
+            - Behåll personnamn, företagsnamn och produktnamn oöversatta.
+            - JSON-nycklarna ska vara oförändrade (på engelska enligt strukturen ovan).
+            """.formatted(LanguageCode.displayName(outputLanguage), outputLanguage,
+                          LanguageCode.displayName(outputLanguage));
+    }
+
     public MeetingSummary summarize(Transcription transcription,
                                      AnalysisProfile profile,
-                                     RelevantContext context) {
+                                     RelevantContext context,
+                                     String outputLanguage) {
 
-        String systemPrompt = promptLoader.load(profile) + UNTRUSTED_INPUT_RULES;
+        String systemPrompt = promptLoader.load(profile)
+            + outputLanguageRules(outputLanguage)
+            + UNTRUSTED_INPUT_RULES;
 
         var request = new ChatRequest(
             llmModel,
