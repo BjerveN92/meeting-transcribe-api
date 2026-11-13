@@ -18,6 +18,7 @@ public record TranscribeResponse(
         boolean wasTranscoded,
         long originalSizeBytes,
         long compressedSizeBytes,
+        int chunkCount,
         Instant createdAt
     ) {}
 
@@ -37,6 +38,7 @@ public record TranscribeResponse(
                 tc.wasTranscoded(),
                 tc.originalSizeBytes(),
                 tc.compressedSizeBytes(),
+                tc.chunkCount(),
                 report.createdAt()
             )
         );

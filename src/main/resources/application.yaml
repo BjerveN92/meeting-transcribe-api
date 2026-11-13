@@ -5,14 +5,17 @@ openrouter:
     stt: mistralai/voxtral-small-transcribe-3-0
     llm: openai/gpt-4o
   stt:
-    # Slug för leverantören som ska få diarize=true (via provider.options).
-    # Lämna tomt för att stänga av, eller om modellen inte stödjer diarisering.
+
     diarize-provider: mistral
 
 transcoding:
-  max-size-bytes: 20971520    # 20 MB
+  # Max rådata per STT-anrop. Base64 blir ~4/3 större: 18 MB -> ~24 MB,
+  # under OpenRouters gräns på 25 MB. Större filer transkodas och delas upp.
+  max-size-bytes: 18874368    # 18 MB
   bitrate: 48k
   sample-rate: 16000
+  # Längd per bit för långa möten. 48 kbps * 1200 s ≈ 7,2 MB per bit.
+  chunk-seconds: 1200
 
 server:
   port: 8080
@@ -21,16 +24,14 @@ spring:
   application:
     name: meeting-transcribe-api
   config:
-    # Läser lokala hemligheter från .env (gitignorerad). "optional" = ingen krasch om filen saknas,
-    # t.ex. i produktion där variablerna sätts som riktiga miljövariabler.
+
     import: optional:file:.env[.properties]
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
-  # Inaktivera auto-konfiguration av VectorStore och DataSource
-  # tills du är redo att sätta upp pgvector + embedding-modell.
-  # Ta bort dessa excludes när du konfigurerar RAG.
+
+      max-file-size: 2GB
+      max-request-size: 2GB
+
   docker:
     compose:
       enabled: false   # sätt till true (och starta Docker Desktop) när RAG/pgvector ska användas

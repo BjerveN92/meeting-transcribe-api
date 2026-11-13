@@ -30,9 +30,13 @@ public class MainService {
         // 1. Komprimera vid behov
         TranscodeResult transcoded = transcodingService.process(audioFile);
 
-        // 2. Transkribera via OpenRouter STT
-        Transcription transcription = transcribeService.transcribe(
-                transcoded, language);
+        // 2. Transkribera via OpenRouter STT (en eller flera bitar)
+        Transcription transcription;
+        try {
+            transcription = transcribeService.transcribe(transcoded, language);
+        } finally {
+            transcoded.cleanup();
+        }
 
         // 3. Hämta relevant RAG-kontext
         RelevantContext context = contextService.retrieve(

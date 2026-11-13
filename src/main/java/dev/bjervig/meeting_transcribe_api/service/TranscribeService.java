@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -30,19 +33,52 @@ public class TranscribeService {
     @Value("${openrouter.stt.diarize-provider:}")
     private String diarizeProvider;
 
+    /**
+     * Transkriberar alla ljudbitar i tur och ordning och slår ihop dem till en
+     * transkribering. Tidsstämplar i senare bitar förskjuts med bitens startposition.
+     */
     public Transcription transcribe(TranscodeResult audio, String language)
             throws IOException {
-        byte[] bytes = Files.readAllBytes(audio.outputPath());
-        String base64 = Base64.getEncoder().encodeToString(bytes);
+        var text = new StringBuilder();
+        List<SttResponse.Segment> segments = new ArrayList<>();
+        double duration = 0;
+        double cost = 0;
+
+        List<Path> chunks = audio.chunks();
+        for (int i = 0; i < chunks.size(); i++) {
+            Transcription part = transcribeOne(chunks.get(i), audio.outputFormat(), language);
+            double offset = (double) i * audio.chunkSeconds();
+
+            if (part.rawText() != null && !part.rawText().isBlank()) {
+                if (!text.isEmpty()) {
+                    text.append('\n');
+                }
+                text.append(part.rawText().strip());
+            }
+            for (SttResponse.Segment s : part.segments()) {
+                segments.add(new SttResponse.Segment(
+                        segments.size(), s.start() + offset, s.end() + offset,
+                        s.text(), s.speaker(), s.speakerLabel(), s.channel(),
+                        s.avgLogprob(), s.compressionRatio(), s.noSpeechProb()));
+            }
+            duration += part.audioDurationSeconds();
+            cost += part.sttCost();
+        }
+
+        return new Transcription(text.toString(), segments, duration, cost);
+    }
+
+    private Transcription transcribeOne(Path file, String format, String language)
+            throws IOException {
+        String base64 = Base64.getEncoder().encodeToString(Files.readAllBytes(file));
 
         SttRequest request = SttRequest.withBase64(
-            sttModel, base64, audio.outputFormat(),
+            sttModel, base64, format,
             language, // null = låt modellen autodetektera språket
             providerOptions()
         );
 
-        SttResponse response = client.stt(request);
-        return Transcription.from(response);
+        return Transcription.from(client.stt(request));
     }
 
     private Map<String, Object> providerOptions() {
